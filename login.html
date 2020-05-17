@@ -3,11 +3,78 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
+    <link rel="stylesheet" href="style/login.css" />
+    <script src="./js/jsencrypt.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+    <title>My System</title>
   </head>
+
   <body>
-    <form action="">
-      <input type="text" placeholder="请登录" />
-    </form>
+    <div class="container">
+      <form onsubmit="return false">
+        <input
+          id="username"
+          name="username"
+          type="text"
+          placeholder="Input your username"
+        />
+        <input
+          id="password"
+          name="password"
+          type="password"
+          placeholder="Input your password"
+        />
+        <input id="check" type="checkbox" checked="cheched" />
+        <input id="submit" type="submit" value="Submit" />
+      </form>
+    </div>
+    <script>
+      const submit = document.querySelector("#submit");
+      const username = document.querySelector("#username");
+      const password = document.querySelector("#password");
+
+      submit.addEventListener("click", () => {
+        fetch("login.php", {
+          method: "POST",
+          body: "ask=publicKey",
+          headers: new Headers({
+            "Content-Type": "application/x-www-form-urlencoded",
+          }),
+        })
+          .then((res) => res.json())
+          .then((res) => {
+            const encrypt = new JSEncrypt();
+            const publicKey = res.publicKey;
+            // console.log(publicKey);
+            if (publicKey != undefined) {
+              encrypt.setPublicKey(publicKey);
+              //   因为数据在网络上传输时，非字母数字字符都将被替换成百分号（%）后跟两位十六进制数，而base64编码在传输到后端的时候，+会变成空格，因此先替换掉。后端再替换回来
+              const user = encodeURI(encrypt.encrypt(username)).replace(
+                /\+/g,
+                "%2B"
+              );
+              const pwd = encodeURI(encrypt.encrypt(password)).replace(
+                /\+/g,
+                "%2B"
+              );
+              const data = `username=${user}&password=${pwd}`;
+              console.log(user);
+              fetch("login.php", {
+                method: "POST",
+                headers: {
+                  // fetch默认头部中设置为content-type:"application/json"因此这里要显式声明为form式，否则后端php不能通过$_POST接收（$_REQUEST也只能接受GET的值）
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: data,
+              })
+                .then((res) => res.json())
+                .then((res) => console.log(res.msg))
+                .catch((err) => alert(err));
+            }
+            // console.log(res);
+          })
+          .catch((err) => console.log("Can't get public key", err));
+      });
+    </script>
   </body>
 </html>
